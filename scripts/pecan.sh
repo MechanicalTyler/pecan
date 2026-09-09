@@ -121,13 +121,19 @@ pecan() {
   local PECAN_EXTRA_RUN_ARGS=()
   pecan_add_run_arg() { PECAN_EXTRA_RUN_ARGS+=("$1" "$2"); }
 
+  # find+process-substitution, not a bare glob: a bare `*.sh` glob with no
+  # matches aborts under zsh's default nomatch option (this hook dir is
+  # empty by default), and a `| while read` pipe would run the loop body in
+  # a subshell, losing pecan_add_run_arg()'s writes to the array below.
   local hook
-  for hook in "$repo"/hooks.d/run.d/*.sh; do
-    [ -e "$hook" ] || continue
+  while IFS= read -r hook; do
     . "$hook"
-  done
+  done < <(find "$repo/hooks.d/run.d" -maxdepth 1 -type f -name '*.sh' 2>/dev/null | sort)
 
   echo "Container '$container_name' is new — creating."
+  # --entrypoint overrides the image's `ENTRYPOINT ["pi"]` so the container
+  # stays alive on a shell sleep instead of running `pi` with "sleep
+  # 99999999" as its arguments.
   docker run --rm -d --name "$container_name" \
     --hostname "$PECAN_HOSTNAME" \
     --memory="${PECAN_MEMORY_LIMIT:-4g}" \
@@ -135,8 +141,9 @@ pecan() {
     -v "$PECAN_HOST_DIR:$PECAN_HOME" \
     -v "$PECAN_VOLUME_NAME:$PECAN_HOME/.pi/agent" \
     "${PECAN_EXTRA_RUN_ARGS[@]}" \
+    --entrypoint sh \
     "${PECAN_IMAGE:-pecan:latest}" \
-    sleep 99999999
+    -c 'sleep infinity'
 
   docker exec -it "$container_name" bash
   return
