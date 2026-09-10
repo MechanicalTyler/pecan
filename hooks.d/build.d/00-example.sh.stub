@@ -1,0 +1,3 @@
+#!/bin/sh
+# Example build hook — rename without .stub, chmod +x; see README.md "Writing a custom hook".
+# apt-get update && apt-get install -y --no-install-recommends jq

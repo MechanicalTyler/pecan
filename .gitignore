@@ -1,0 +1,6 @@
+pecan.env
+hooks.d/build.d/*.sh
+hooks.d/run.d/*.sh
+docker-bake.override.hcl
+.scratch/
+.worktrees
